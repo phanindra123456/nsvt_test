@@ -1,0 +1,379 @@
+You are a network automation engineer with expertise in Robot Framework.
+Create a script for a test case with the following details:
+
+Test case title: OSPF Configuration and Neighborship
+Test case procedure: 
+
+
+Capture test pre check show command outputs
+• show proc cpu
+• show memory summary
+• show redundancy
+• show logging
+• show context
+• show memory compart start
+
+
+Step 1 : Configure the OSPF network type as point-to-point on the interface
+
+
+RP/0/0/CPU0:R2#show run router ospf
+Mon Mar 7 14:23:23.565 UTC
+router ospf 1
+nsr
+log adjacency changes detail
+router-id 2.2.2.2
+nsf cisco
+timers throttle lsa all 0 20 5000
+timers throttle spf 50 50 5000
+timers lsa min-arrival 15
+timers pacing flood 15
+redistribute connected
+address-family ipv4 unicast
+area 0
+interface GigabitEthernet0/0/0/2
+authentication message-digest keychain OSPF
+network point-to-point
+!
+!
+area 3
+interface GigabitEthernet0/0/0/0
+authentication message-digest keychain OSPF
+network point-to-point
+!
+!
+!
+
+RP/0/0/CPU0:R2#show run key chain OSPF
+Mon Mar 7 14:23:33.775 UTC
+key chain OSPF
+key 1
+accept-lifetime 00:00:00 december 01 2014 infinite
+key-string password 104D000A0618
+send-lifetime 00:00:00 december 01 2014 infinite
+cryptographic-algorithm HMAC-MD5
+!
+!
+
+RP/0/0/CPU0:R2#
+
+
+Step 2 : Verify Authentication is enabled on interface
+
+
+RP/0/0/CPU0:R2#show ospf interface GigabitEthernet0/0/0/2
+Mon Mar 7 14:25:13.308 UTC
+
+GigabitEthernet0/0/0/2 is up, line protocol is up
+Internet Address 10.10.15.1/24, Area 0
+Label stack Primary label 0 Backup label 0 SRTE label 0
+Process ID 1, Router ID 2.2.2.2, Network Type POINT_TO_POINT, Cost: 1
+Transmit Delay is 1 sec, State POINT_TO_POINT, MTU 1500, MaxPktSz 1500
+Forward reference No, Unnumbered no, Bandwidth 1000000
+Timer intervals configured, Hello 10, Dead 40, Wait 40, Retransmit 5
+Non-Stop Forwarding (NSF) enabled
+Hello due in 00:00:07:991
+Index 1/2, flood queue length 0
+Next 0(0)/0(0)
+Last flood scan length is 12, maximum is 12
+Last flood scan time is 0 msec, maximum is 0 msec
+LS Ack List: current length 0, high water mark 7
+Neighbor Count is 1, Adjacent neighbor count is 1
+Adjacent with neighbor 3.3.3.3
+Suppress hello for 0 neighbor(s)
+Keychain-based authentication enabled
+Key id used is 1
+Multi-area interface Count is 0
+RP/0/0/CPU0:R2#
+
+
+Step 3 : Verify ospfv2 neighborship is up on Interface
+
+
+RP/0/0/CPU0:R2#show ospf neighbor
+Mon Mar 7 14:26:21.273 UTC
+
+* Indicates MADJ interface
+# Indicates Neighbor awaiting BFD session up
+
+Neighbors for OSPF 1
+
+Neighbor ID Pri State Dead Time Address Interface
+3.3.3.3 1 FULL/ - 00:00:39 10.10.15.5 GigabitEthernet0/0/0/2
+Neighbor is up for 00:00:00
+1.1.1.1 1 FULL/ - 00:00:39 10.10.16.6 GigabitEthernet0/0/0/0
+Neighbor is up for 00:00:03
+
+Total neighbor count: 2
+RP/0/0/CPU0:R2#
+
+
+Step 4 : Remove one of the OSPF interface on the DUT and verify the neighborship is DOWN.
+
+
+RP/0/0/CPU0:R2(config)#router ospf 1
+RP/0/0/CPU0:R2(config-ospf)# area 0
+RP/0/0/CPU0:R2(config-ospf-ar)#no interface GigabitEthernet0/0/0/2
+RP/0/0/CPU0:R2(config-ospf-ar)#root
+RP/0/0/CPU0:R2(config)#show conf
+Mon Mar 7 14:29:13.131 UTC
+Building configuration...
+!! IOS XR Configuration 6.3.1
+router ospf 1
+area 0
+no interface GigabitEthernet0/0/0/2
+!
+!
+end
+
+RP/0/0/CPU0:R2(config)#commit
+Mon Mar 7 14:29:23.931 UTC
+RP/0/0/CPU0:R2(config)#end
+RP/0/0/CPU0:R2#
+RP/0/0/CPU0:R2#show ospf neighbor
+Mon Mar 7 14:29:30.570 UTC
+
+* Indicates MADJ interface
+# Indicates Neighbor awaiting BFD session up
+
+Neighbors for OSPF 1
+
+Neighbor ID Pri State Dead Time Address Interface
+1.1.1.1 1 FULL/ - 00:00:39 10.10.16.6 GigabitEthernet0/0/0/0
+Neighbor is up for 00:03:12
+
+Total neighbor count: 1
+RP/0/0/CPU0:R2#
+
+
+Step 5 : Reconfigure the OSPF interface and Verify ospf adjacency is Up on Interface
+
+
+RP/0/0/CPU0:R2#show configuration commit changes last 1
+Mon Mar 7 14:31:30.492 UTC
+Building configuration...
+!! IOS XR Configuration 6.3.1
+router ospf 1
+area 0
+no interface GigabitEthernet0/0/0/2
+!
+!
+end
+
+RP/0/0/CPU0:R2#rollback configuration last 1
+Mon Mar 7 14:31:33.492 UTC
+
+Loading Rollback Changes.
+Loaded Rollback Changes in 1 sec
+Committing.
+8 items committed in 1 sec (7)items/sec
+Updating.
+Updated Commit database in 1 sec
+Configuration successfully rolled back 1 commits.
+RP/0/0/CPU0:R2#
+RP/0/0/CPU0:R2#
+RP/0/0/CPU0:R2#show ospf neighbor
+Mon Mar 7 14:31:43.811 UTC
+
+* Indicates MADJ interface
+# Indicates Neighbor awaiting BFD session up
+
+Neighbors for OSPF 1
+
+Neighbor ID Pri State Dead Time Address Interface
+3.3.3.3 1 FULL/ - 00:00:38 10.10.15.5 GigabitEthernet0/0/0/2
+Neighbor is up for 00:00:01
+1.1.1.1 1 FULL/ - 00:00:37 10.10.16.6 GigabitEthernet0/0/0/0
+Neighbor is up for 00:05:25
+
+Total neighbor count: 2
+RP/0/0/CPU0:R2#
+
+
+Step 6 : Verify the OSPF routes in the DUT.
+
+
+RP/0/0/CPU0:R2#show route summary
+Mon Mar 7 14:34:38.789 UTC
+Route Source Routes Backup Deleted Memory(bytes)
+connected 4 1 0 800
+local 5 0 0 800
+dagr 0 0 0 0
+isis L1L2 0 0 0 0
+ospf 1 17 1 0 2952
+Total 26 2 0 4552
+
+RP/0/0/CPU0:R2#
+RP/0/0/CPU0:R2#show route ospf
+Mon Mar 7 14:34:45.949 UTC
+
+O E2 1.1.1.1/32 [110/20] via 10.10.16.6, 00:08:28, GigabitEthernet0/0/0/0
+O E2 3.3.3.3/32 [110/20] via 10.10.15.5, 00:03:03, GigabitEthernet0/0/0/2
+O E2 4.4.4.4/32 [110/20] via 10.10.15.5, 00:03:03, GigabitEthernet0/0/0/2
+O E2 10.10.24.0/24 [110/20] via 10.10.15.5, 00:03:03, GigabitEthernet0/0/0/2
+O E2 10.10.25.0/24 [110/20] via 10.10.15.5, 00:03:03, GigabitEthernet0/0/0/2
+O E2 10.10.34.0/24 [110/20] via 10.10.15.5, 00:03:03, GigabitEthernet0/0/0/2
+O IA 10.10.45.0/24 [110/2] via 10.10.15.5, 00:03:03, GigabitEthernet0/0/0/2
+O E2 10.10.56.0/24 [110/20] via 10.10.15.5, 00:03:03, GigabitEthernet0/0/0/2
+[110/20] via 10.10.16.6, 00:03:03, GigabitEthernet0/0/0/0
+O E2 172.16.0.22/32 [110/20] via 10.10.16.6, 00:08:28, GigabitEthernet0/0/0/0
+O E2 172.16.0.23/32 [110/20] via 10.10.16.6, 00:08:28, GigabitEthernet0/0/0/0
+O E2 172.16.0.24/32 [110/20] via 10.10.16.6, 00:08:28, GigabitEthernet0/0/0/0
+O E2 172.16.0.25/32 [110/20] via 10.10.16.6, 00:08:28, GigabitEthernet0/0/0/0
+O E2 182.16.0.25/32 [110/20] via 10.10.16.6, 00:08:28, GigabitEthernet0/0/0/0
+O E2 182.16.0.27/32 [110/20] via 10.10.16.6, 00:08:28, GigabitEthernet0/0/0/0
+O E2 182.16.0.28/32 [110/20] via 10.10.16.6, 00:08:28, GigabitEthernet0/0/0/0
+O E2 182.16.0.29/32 [110/20] via 10.10.16.6, 00:08:28, GigabitEthernet0/0/0/0
+O E2 182.16.0.30/32 [110/20] via 10.10.16.6, 00:08:28, GigabitEthernet0/0/0/0
+RP/0/0/CPU0:R2#show route 172.16.0.22/32
+Mon Mar 7 14:34:52.168 UTC
+
+Routing entry for 172.16.0.22/32
+Known via "ospf 1", distance 110, metric 20, type extern 2
+Installed Mar 7 14:26:17.963 for 00:08:34
+Routing Descriptor Blocks
+10.10.16.6, from 1.1.1.1, via GigabitEthernet0/0/0/0
+Route metric is 20
+No advertising protos.
+RP/0/0/CPU0:R2#
+
+RP/0/0/CPU0:R2#show ospf 1 database database-summary
+Mon Mar 7 15:17:03.075 UTC
+
+
+OSPF Router with ID (2.2.2.2) (Process ID 1)
+
+Area 0 database summary
+LSA Type Count Delete Maxage
+Router 2 0 0
+Network 0 0 0
+Summary Net 2 0 0
+Summary ASBR 2 0 0
+Type-7 Ext 0 0 0
+Opaque Link 0 0 0
+Opaque Area 0 0 0
+Subtotal 6 0 0
+
+
+Step 7 : Configure the OSPF network type as broadcast on the interface
+
+
+RP/0/0/CPU0:R2#show run router ospf
+Tue Mar 8 07:03:51.693 UTC
+router ospf 1
+nsr
+log adjacency changes detail
+router-id 2.2.2.2
+nsf cisco
+timers throttle lsa all 0 20 5000
+timers throttle spf 50 50 5000
+timers lsa min-arrival 15
+timers pacing flood 15
+redistribute connected
+address-family ipv4 unicast
+area 0
+network broadcast
+interface GigabitEthernet0/0/0/2
+authentication message-digest keychain OSPF
+network broadcast
+!
+!
+area 3
+interface GigabitEthernet0/0/0/0
+authentication message-digest keychain OSPF
+network broadcast
+!
+!
+!
+
+RP/0/0/CPU0:R2#
+
+
+Step 8 : Verify the OSPF neighborship and DR/BDR state of the DUT.
+
+RP/0/0/CPU0:R2#show ospf neighbor
+Tue Mar 8 07:03:58.083 UTC
+
+* Indicates MADJ interface
+# Indicates Neighbor awaiting BFD session up
+
+Neighbors for OSPF 1
+
+Neighbor ID Pri State Dead Time Address Interface
+3.3.3.3 1 FULL/DR 00:00:35 10.10.15.5 GigabitEthernet0/0/0/2
+Neighbor is up for 00:00:23
+1.1.1.1 1 FULL/BDR 00:00:33 10.10.16.6 GigabitEthernet0/0/0/0
+Neighbor is up for 00:01:22
+
+Total neighbor count: 2
+RP/0/0/CPU0:R2#
+
+
+Step 9 : Verify that there are no system issues such as CPU hog, memory issues, crashes, tracebacks or any error logs.
+
+sh logg start today | u e -e 'ERR|Err|err|Drop|drop|dumper|Trace|Fail|fail|-3-'
+
+Capture test post checks outputs and compare them with prechecks
+• show proc cpu
+• show memory summary
+• show redundancy
+• show logging
+• show context
+• show memory compare end
+• show memory compare report
+
+
+Along with open source RobotFramework libraries like BuiltIn, String, Collection etc. we are using a custom set of libraries and keywords called CXTA. Please find attached a file with all the keywords available in that library - keyword-index.pdf
+
+Write the script using the following template:
+
+*** Settings ***
+Documentation     <Title> \n\n
+...               Description: <description of this test case> \n\n
+...               Procedure: \n\n
+...               1. Example Test 1 \n\n
+...               Variable File To Edit/Modify: \n\n
+...               (Update the line below with the file used or delete if not applicable): \n\n
+...               - variable_file.yaml \n\n
+...               Custom Keyword File: \n\n
+...               (Update the line below with the file used or delete if not applicable): \n\n
+...               - keyword_file.robot \n\n
+
+# CXTA
+Library  CXTA
+Resource  cxta.robot
+
+# Include all the keywords from the opensource libraries from robot framework:
+# http://robotframework.org/robotframework/#standard-libraries
+Library     String
+Library     BuiltIn
+Library     Dialogs
+Library     DateTime
+Library     Collections
+Library     OperatingSystem
+
+# Update/uncomment the line below with the file used or delete if not applicable
+# Variables   /path-to/variable_file.yaml
+
+# Update/uncomment the line below with the file used or delete if not applicable
+# Resource    /path-to/keyword_file.robot
+
+Suite Setup     Run Keywords
+...             load testbed
+
+Suite Teardown      Run Keywords
+...                 Disconnect From All Devices
+
+*** Test Cases ***
+1. Example Test 1
+  [Documentation]  This is an example test
+   Should Be True  1==1
+
+Key points for using the above template:
+1. Use Suite Setup for loading testbed, connecting to devices, prechecks and any setup activities.
+2. Use Suite Teardown for postchecks and disconnecting from all devices and any cleanup activities.
+3. Add all Test steps in Test Cases section.
+4. Add keywords to the keywords section in the same robot file or to a separate resource file.
+5. Look up any keywords that are not present in open source libraries in the attached keyword-index file.
+6. Keep Suite Setup and Suite Teardown in the Settings section.
+7. Only add test steps in the Test Cases section.
